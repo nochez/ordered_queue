@@ -9,7 +9,8 @@ register "$PRIORITY"
 wait_turn "$PRIORITY" "$TIMESTAMP" "$PID"
 start_exe "$PRIORITY" "$TIMESTAMP" "$PID"
 
-sleep 10  # Here should do some work
+echo "task A"
+sleep 2  # Here we do some work
 
 finish_exe
 
