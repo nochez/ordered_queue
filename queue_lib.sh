@@ -2,10 +2,17 @@ QUEUE_FILE="/tmp/exec_queue"
 QUEUE_LOCK="/tmp/exec_queue.lock"
 EXEC_LOCK="/tmp/exec_lock"
 
+# Debug messages only if DEBUG_MODE is on
+debug_echo() {
+  if [[ "$DEBUG_MODE" == "true" ]]; then
+    echo "$@"
+  fi
+}
+
 register() {
   local priority="$1"
-  local timestamp=$(date +%s%N)
-  local pid="$$"
+  local timestamp="$2"
+  local pid="$3"
 
   # Atomic write into queue
   (
@@ -19,21 +26,28 @@ wait_turn() {
   local timestamp="$2"
   local pid="$3"
 
-  # Sort queue and see if we are first
   while true; do
-    (
-      flock -s 200
-      local first_entry=$(sort -k1,1n -k2,2n "$QUEUE_FILE" | head -n1)
-    ) 200>"$QUEUE_LOCK"
+    local first_entry=$(
+      (
+        flock -s 200
+        sort -k1,1n -k2,2n "$QUEUE_FILE" | head -n1
+      ) 200>"$QUEUE_LOCK"
+    )
+
+    # Debug output
+    debug_echo "Checking if current task is first in queue..."
+    debug_echo "Expected entry: '$priority $timestamp $pid'"
+    debug_echo "First entry in queue: '$first_entry'"
 
     if [[ "$first_entry" == "$priority $timestamp $pid" ]]; then
+      debug_echo "This task is first in the queue. Proceeding..."
       break
     else
-      sleep 5
+      debug_echo "."
+      sleep 3
     fi
   done
 }
-
 
 start_exe() {
   # extra lock for critical path

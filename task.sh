@@ -13,18 +13,20 @@ TASK_NAME="$2"
 TIMESTAMP=$(date +%s%N)
 PID="$$"
 
-register "$PRIORITY"
+register "$PRIORITY" "$TIMESTAMP" "$PID"
 echo "Task '$TASK_NAME' : $PRIORITY @ registered."
 
 wait_turn "$PRIORITY" "$TIMESTAMP" "$PID"
 echo "Task '$TASK_NAME' : $PRIORITY @ now executing."
 
-# Enter the critical section
-start_exe "$PRIORITY" "$TIMESTAMP" "$PID"
 
+
+start_exe "$PRIORITY" "$TIMESTAMP" "$PID"
 echo "Task '$TASK_NAME' : $PRIORITY @ critical section."
+
 sleep 3  # work work work
 
 finish_exe "$PRIORITY" "$TIMESTAMP" "$PID"
 echo "Task '$TASK_NAME' : $PRIORITY @ finished execution."
+
 
