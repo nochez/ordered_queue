@@ -24,13 +24,38 @@ wait_turn() {
   local pid="$3"
 
   while true; do
-    local first_task=$(find "$QUEUE_DIR" -type d -exec bash -c 'cat "$0/task_info"' {} \; | sort -k1,1n -k2,2n | head -n 1)
+    # Find dirs
+    local directories=$(find "$QUEUE_DIR" -mindepth 1 -maxdepth 1 -type d)
+    debug_echo "Directories: $directories"
+
+    # Read task_info files
+    local task_infos=""
+    for dir in $directories; do
+      if [[ -f "$dir/task_info" ]]; then
+        local info=$(cat "$dir/task_info")
+        task_infos+="$info"$'\n'
+      else
+        debug_echo "No task_info found in directory: $dir"
+      fi
+    done
+    debug_echo "Collected task_infos before sorting:\n$task_infos"
+
+    # Remove empty lines (this fixes a bug)
+    local filtered_task_infos=$(echo -e "$task_infos" | grep -v '^$')
+    debug_echo "Filtered (no empty lines) task_infos:\n$filtered_task_infos"
+
+    # Sort
+    local sorted_task_infos=$(echo -e "$filtered_task_infos" | sort -k1,1n -k2,2n)
+    debug_echo "Sorted task_infos:\n$sorted_task_infos"
+
+    # High priority task
+    local first_task=$(echo "$sorted_task_infos" | head -n 1)
+    debug_echo "First task info: $first_task"
 
     debug_echo "Checking if current task is first in queue..."
     debug_echo "Expected entry: '$priority $timestamp $pid'"
     debug_echo "First entry in queue: '$first_task'"
 
-    # Check if the current task matches the first sorted task entry
     if [[ "$first_task" == "$priority $timestamp $pid" ]]; then
       debug_echo "This task is first in the queue. Proceeding..."
       break
@@ -41,6 +66,7 @@ wait_turn() {
   done
 }
 
+
 start_exe() {
   # Critical path
   exec 300>"$EXEC_LOCK"
@@ -48,7 +74,7 @@ start_exe() {
 }
 
 finish_exe() {
-  rm -rf "$QUEUE_DIR/$1"
+  rm -rf "$QUEUE_DIR/$3"
 
   flock -u 300
   exec 300>&-
